@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineBook - Smart Movie Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .seat {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .seat:hover {
+            transform: scale(1.1);
+        }
+        
+        .seat.available {
+            background: #e5e7eb;
+            border: 2px solid #d1d5db;
+        }
+        
+        .seat.selected {
+            background: #ff0055;
+            border: 2px solid #dc1f4a;
+            color: white;
+        }
+        
+        .seat.booked {
+            background: #6b7280;
+            border: 2px solid #4b5563;
+            cursor: not-allowed;
+            color: white;
+        }
+        
+        .seat.held {
+            background: #fbbf24;
+            border: 2px solid #f59e0b;
+            color: white;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .timer-progress {
+            animation: timerCountdown 300s linear forwards;
+        }
+        
+        @keyframes timerCountdown {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">CineBook</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="myBookingsBtn" class="text-gray-600 hover:text-gray-900 font-medium">My Bookings</button>
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                        <span class="text-sm font-medium">AJ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <div id="mainContent" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- Home Page -->
+        <div id="homePage" class="page">
+            <!-- Search and Filters -->
+            <div class="mb-8">
+                <div class="flex flex-col md:flex-row gap-4 mb-6">
+                    <div class="flex-1">
+                        <input type="text" id="searchInput" placeholder="Search for movies, theaters..." 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    </div>
+                    <select id="locationFilter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500">
+                        <option>Mumbai</option>
+                        <option>Delhi</option>
+                        <option>Bangalore</option>
+                    </select>
+                </div>
+                
+                <!-- Filter Chips -->
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <button class="filter-chip px-4 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium hover:bg-gray-50" data-filter="all">All</button>
+                    <button class="filter-chip px-4 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium hover:bg-gray-50" data-filter="action">Action</button>
+                    <button class="filter-chip px-4 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium hover:bg-gray-50" data-filter="comedy">Comedy</button>
+                    <button class="filter-chip px-4 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium hover:bg-gray-50" data-filter="drama">Drama</button>
+                    <button class="filter-chip px-4 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium hover:bg-gray-50" data-filter="horror">Horror</button>
+                </div>
+            </div>
+
+            <!-- Now Showing -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Now Showing</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="movieGrid">
+                    <!-- Movies will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Movie Details Page -->
+        <div id="movieDetailsPage" class="page hidden">
+            <button id="backToHome" class="flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Movies
+            </button>
+            
+            <div id="movieDetailsContent" class="fade-in">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Theater & Showtime Page -->
+        <div id="theaterPage" class="page hidden">
+            <button id="backToMovieDetails" class="flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Movie Details
+            </button>
+            
+            <div id="theaterContent" class="fade-in">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Seat Selection Page -->
+        <div id="seatPage" class="page hidden">
+            <button id="backToTheater" class="flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Showtimes
+            </button>
+            
+            <!-- Timer Bar -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-yellow-800">Seats held for you</span>
+                    <span id="timerDisplay" class="text-sm font-bold text-yellow-800">05:00</span>
+                </div>
+                <div class="w-full bg-yellow-200 rounded-full h-2">
+                    <div id="timerBar" class="bg-yellow-500 h-2 rounded-full timer-progress"></div>
+                </div>
+            </div>
+            
+            <div id="seatContent" class="fade-in">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Cart & Payment Page -->
+        <div id="cartPage" class="page hidden">
+            <button id="backToSeats" class="flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Seat Selection
+            </button>
+            
+            <div id="cartContent" class="fade-in">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Booking Success Page -->
+        <div id="successPage" class="page hidden">
+            <div id="successContent" class="fade-in text-center">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- My Bookings Page -->
+        <div id="bookingsPage" class="page hidden">
+            <button id="backToHomeFromBookings" class="flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Home
+            </button>
+            
+            <div id="bookingsContent" class="fade-in">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Edit Booking Page -->
+        <div id="editBookingPage" class="page hidden">
+            <button id="backToBookings" class="flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to My Bookings
+            </button>
+            
+            <div id="editBookingContent" class="fade-in">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Cart (Sticky) -->
+    <div id="bottomCart" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 hidden slide-up">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div>
+                <p class="font-medium text-gray-900" id="cartSummary">2 Tickets Selected</p>
+                <p class="text-sm text-gray-600" id="cartPrice">₹480</p>
+            </div>
+            <button id="proceedToPayment" class="bg-pink-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-pink-700">
+                Proceed to Payment
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed top-20 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // Application State
+        let appState = {
+            currentPage: 'home',
+            selectedMovie: null,
+            selectedTheater: null,
+            selectedShowtime: null,
+            selectedSeats: [],
+            bookings: JSON.parse(localStorage.getItem('bookings') || '[]'),
+            currentBooking: null,
+            timer: null,
+            timeLeft: 300 // 5 minutes in seconds
+        };
+
+        // Sample Data
+        const movies = [
+            {
+                id: 1,
+                title: "Avengers: Endgame",
+                genre: "action",
+                rating: 8.4,
+                duration: "181 min",
+                language: "English",
+                poster: "🦸‍♂️",
+                description: "The epic conclusion to the Infinity Saga that became a defining moment in cinematic history.",
+                cast: ["Robert Downey Jr.", "Chris Evans", "Mark Ruffalo"],
+                director: "Russo Brothers"
+            },
+            {
+                id: 2,
+                title: "The Hangover",
+                genre: "comedy",
+                rating: 7.7,
+                duration: "100 min",
+                language: "English",
+                poster: "😂",
+                description: "A bachelor party in Vegas goes horribly wrong when the groom goes missing.",
+                cast: ["Bradley Cooper", "Ed Helms", "Zach Galifianakis"],
+                director: "Todd Phillips"
+            },
+            {
+                id: 3,
+                title: "Parasite",
+                genre: "drama",
+                rating: 8.6,
+                duration: "132 min",
+                language: "Korean",
+                poster: "🎭",
+                description: "A dark comedy thriller about class conflict and social inequality.",
+                cast: ["Song Kang-ho", "Lee Sun-kyun", "Cho Yeo-jeong"],
+                director: "Bong Joon-ho"
+            },
+            {
+                id: 4,
+                title: "A Quiet Place",
+                genre: "horror",
+                rating: 7.5,
+                duration: "90 min",
+                language: "English",
+                poster: "😱",
+                description: "A family must live in silence to avoid creatures that hunt by sound.",
+                cast: ["Emily Blunt", "John Krasinski", "Millicent Simmonds"],
+                director: "John Krasinski"
+            },
+            {
+                id: 5,
+                title: "Spider-Man: No Way Home",
+                genre: "action",
+                rating: 8.2,
+                duration: "148 min",
+                language: "English",
+                poster: "🕷️",
+                description: "Peter Parker's identity is revealed, bringing his superhero responsibilities into conflict with his normal life.",
+                cast: ["Tom Holland", "Zendaya", "Benedict Cumberbatch"],
+                director: "Jon Watts"
+            },
+            {
+                id: 6,
+                title: "Knives Out",
+                genre: "drama",
+                rating: 7.9,
+                duration: "130 min",
+                language: "English",
+                poster: "🔪",
+                description: "A detective investigates the death of a patriarch of an eccentric, combative family.",
+                cast: ["Daniel Craig", "Chris Evans", "Ana de Armas"],
+                director: "Rian Johnson"
+            }
+        ];
+
+        const theaters = [
+            {
+                id: 1,
+                name: "PVR Cinemas - Phoenix Mall",
+                location: "Lower Parel, Mumbai",
+                distance: "2.3 km",
+                amenities: ["Parking", "Food Court", "Wheelchair Access"],
+                showtimes: [
+                    { time: "10:30 AM", price: 200, type: "2D" },
+                    { time: "01:45 PM", price: 240, type: "2D" },
+                    { time: "05:00 PM", price: 280, type: "2D" },
+                    { time: "08:15 PM", price: 320, type: "2D" },
+                    { time: "11:30 PM", price: 240, type: "2D" }
+                ]
+            },
+            {
+                id: 2,
+                name: "INOX - R City Mall",
+                location: "Ghatkopar, Mumbai",
+                distance: "8.7 km",
+                amenities: ["Parking", "Food Court", "Premium Seats"],
+                showtimes: [
+                    { time: "11:00 AM", price: 220, type: "2D" },
+                    { time: "02:30 PM", price: 260, type: "2D" },
+                    { time: "06:00 PM", price: 300, type: "2D" },
+                    { time: "09:30 PM", price: 340, type: "2D" }
+                ]
+            },
+            {
+                id: 3,
+                name: "Cinepolis - Viviana Mall",
+                location: "Thane, Mumbai",
+                distance: "12.1 km",
+                amenities: ["Parking", "Food Court", "Recliner Seats"],
+                showtimes: [
+                    { time: "12:15 PM", price: 250, type: "2D" },
+                    { time: "03:45 PM", price: 290, type: "2D" },
+                    { time: "07:15 PM", price: 330, type: "2D" },
+                    { time: "10:45 PM", price: 270, type: "2D" }
+                ]
+            }
+        ];
+
+        // Utility Functions
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `bg-${type === 'success' ? 'green' : 'red'}-500 text-white px-4 py-2 rounded-lg shadow-lg fade-in`;
+            toast.textContent = message;
+            
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.add('hidden'));
+            document.getElementById(pageId + 'Page').classList.remove('hidden');
+            appState.currentPage = pageId;
+        }
+
+        function formatPrice(price) {
+            return `₹${price}`;
+        }
+
+        // Initialize Home Page
+        function initHomePage() {
+            const movieGrid = document.getElementById('movieGrid');
+            movieGrid.innerHTML = '';
+
+            movies.forEach(movie => {
+                const movieCard = document.createElement('div');
+                movieCard.className = 'bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow';
+                movieCard.innerHTML = `
+                    <div class="aspect-[3/4] bg-gray-100 flex items-center justify-center text-6xl">
+                        ${movie.poster}
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-900 text-sm mb-1">${movie.title}</h3>
+                        <p class="text-xs text-gray-600 mb-2">${movie.genre.charAt(0).toUpperCase() + movie.genre.slice(1)} • ${movie.duration}</p>
+                        <div class="flex items-center">
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">⭐ ${movie.rating}</span>
+                        </div>
+                    </div>
+                `;
+                
+                movieCard.addEventListener('click', () => {
+                    appState.selectedMovie = movie;
+                    showMovieDetails();
+                });
+                
+                movieGrid.appendChild(movieCard);
+            });
+        }
+
+        // Show Movie Details
+        function showMovieDetails() {
+            const movie = appState.selectedMovie;
+            const content = document.getElementById('movieDetailsContent');
+            
+            content.innerHTML = `
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="md:flex">
+                        <div class="md:w-1/3">
+                            <div class="aspect-[3/4] bg-gray-100 flex items-center justify-center text-8xl">
+                                ${movie.poster}
+                            </div>
+                        </div>
+                        <div class="md:w-2/3 p-6">
+                            <h1 class="text-3xl font-bold text-gray-900 mb-2">${movie.title}</h1>
+                            <div class="flex items-center space-x-4 mb-4">
+                                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">⭐ ${movie.rating}</span>
+                                <span class="text-gray-600">${movie.duration}</span>
+                                <span class="text-gray-600">${movie.language}</span>
+                            </div>
+                            
+                            <p class="text-gray-700 mb-6">${movie.description}</p>
+                            
+                            <div class="mb-4">
+                                <h3 class="font-semibold text-gray-900 mb-2">Cast</h3>
+                                <p class="text-gray-600">${movie.cast.join(', ')}</p>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <h3 class="font-semibold text-gray-900 mb-2">Director</h3>
+                                <p class="text-gray-600">${movie.director}</p>
+                            </div>
+                            
+                            <button id="bookTicketsBtn" class="bg-pink-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-pink-700 transition-colors">
+                                Book Tickets
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('bookTicketsBtn').addEventListener('click', showTheaters);
+            showPage('movieDetails');
+        }
+
+        // Show Theaters
+        function showTheaters() {
+            const content = document.getElementById('theaterContent');
+            
+            content.innerHTML = `
+                <div class="mb-6">
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">${appState.selectedMovie.title}</h1>
+                    <p class="text-gray-600">Select theater and showtime</p>
+                </div>
+                
+                <div class="space-y-6">
+                    ${theaters.map(theater => `
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900 text-lg">${theater.name}</h3>
+                                    <p class="text-gray-600 text-sm">${theater.location} • ${theater.distance}</p>
+                                    <div class="flex flex-wrap gap-2 mt-2">
+                                        ${theater.amenities.map(amenity => `
+                                            <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">${amenity}</span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                ${theater.showtimes.map(showtime => `
+                                    <button class="showtime-btn border border-gray-300 rounded-lg p-3 text-center hover:border-pink-500 hover:bg-pink-50 transition-colors" 
+                                            data-theater="${theater.id}" data-time="${showtime.time}" data-price="${showtime.price}">
+                                        <div class="font-medium text-gray-900">${showtime.time}</div>
+                                        <div class="text-sm text-gray-600">${formatPrice(showtime.price)}</div>
+                                        <div class="text-xs text-gray-500">${showtime.type}</div>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Add event listeners to showtime buttons
+            document.querySelectorAll('.showtime-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const theaterId = parseInt(e.currentTarget.dataset.theater);
+                    const time = e.currentTarget.dataset.time;
+                    const price = parseInt(e.currentTarget.dataset.price);
+                    
+                    appState.selectedTheater = theaters.find(t => t.id === theaterId);
+                    appState.selectedShowtime = { time, price };
+                    
+                    showSeatSelection();
+                });
+            });
+            
+            showPage('theater');
+        }
+
+        // Show Seat Selection
+        function showSeatSelection() {
+            const content = document.getElementById('seatContent');
+            
+            // Generate seat map
+            const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+            const seatsPerRow = 12;
+            
+            // Simulate some booked seats
+            const bookedSeats = ['A5', 'A6', 'B3', 'C7', 'C8', 'D10', 'E2', 'F5', 'F6', 'G9'];
+            const heldSeats = ['B7', 'D4', 'H3'];
+            
+            content.innerHTML = `
+                <div class="mb-6">
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Select Seats</h1>
+                    <p class="text-gray-600">${appState.selectedMovie.title} • ${appState.selectedTheater.name}</p>
+                    <p class="text-gray-600">${appState.selectedShowtime.time} • ${formatPrice(appState.selectedShowtime.price)} per seat</p>
+                </div>
+                
+                <!-- Seat Legend -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+                    <div class="flex flex-wrap gap-6 text-sm">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-gray-200 border-2 border-gray-300 rounded mr-2"></div>
+                            <span>Available</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-pink-600 border-2 border-pink-700 rounded mr-2"></div>
+                            <span>Selected</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-gray-600 border-2 border-gray-700 rounded mr-2"></div>
+                            <span>Booked</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-yellow-400 border-2 border-yellow-500 rounded mr-2"></div>
+                            <span>Held</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Screen -->
+                <div class="text-center mb-8">
+                    <div class="bg-gray-800 text-white py-2 px-8 rounded-t-full inline-block text-sm font-medium">
+                        SCREEN
+                    </div>
+                </div>
+                
+                <!-- Seat Map -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-x-auto">
+                    <div class="space-y-3">
+                        ${rows.map(row => `
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="w-6 text-center font-medium text-gray-600">${row}</div>
+                                ${Array.from({length: seatsPerRow}, (_, i) => {
+                                    const seatId = `${row}${i + 1}`;
+                                    let seatClass = 'seat available';
+                                    
+                                    if (bookedSeats.includes(seatId)) {
+                                        seatClass = 'seat booked';
+                                    } else if (heldSeats.includes(seatId)) {
+                                        seatClass = 'seat held';
+                                    }
+                                    
+                                    return `
+                                        <button class="${seatClass} w-8 h-8 rounded text-xs font-medium" 
+                                                data-seat="${seatId}" ${bookedSeats.includes(seatId) ? 'disabled' : ''}>
+                                            ${i + 1}
+                                        </button>
+                                    `;
+                                }).join('')}
+                                <div class="w-6"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            // Add seat selection logic
+            document.querySelectorAll('.seat:not(.booked)').forEach(seat => {
+                seat.addEventListener('click', (e) => {
+                    const seatId = e.target.dataset.seat;
+                    
+                    if (e.target.classList.contains('selected')) {
+                        e.target.classList.remove('selected');
+                        e.target.classList.add('available');
+                        appState.selectedSeats = appState.selectedSeats.filter(s => s !== seatId);
+                    } else if (e.target.classList.contains('available')) {
+                        if (appState.selectedSeats.length < 6) { // Max 6 seats
+                            e.target.classList.remove('available');
+                            e.target.classList.add('selected');
+                            appState.selectedSeats.push(seatId);
+                        } else {
+                            showToast('Maximum 6 seats can be selected', 'error');
+                        }
+                    }
+                    
+                    updateBottomCart();
+                });
+            });
+            
+            startTimer();
+            showPage('seat');
+        }
+
+        // Update Bottom Cart
+        function updateBottomCart() {
+            const bottomCart = document.getElementById('bottomCart');
+            const cartSummary = document.getElementById('cartSummary');
+            const cartPrice = document.getElementById('cartPrice');
+            
+            if (appState.selectedSeats.length > 0) {
+                const totalPrice = appState.selectedSeats.length * appState.selectedShowtime.price;
+                cartSummary.textContent = `${appState.selectedSeats.length} Ticket${appState.selectedSeats.length > 1 ? 's' : ''} Selected`;
+                cartPrice.textContent = formatPrice(totalPrice);
+                bottomCart.classList.remove('hidden');
+            } else {
+                bottomCart.classList.add('hidden');
+            }
+        }
+
+        // Start Timer
+        function startTimer() {
+            appState.timeLeft = 300; // Reset to 5 minutes
+            const timerDisplay = document.getElementById('timerDisplay');
+            const timerBar = document.getElementById('timerBar');
+            
+            appState.timer = setInterval(() => {
+                appState.timeLeft--;
+                
+                const minutes = Math.floor(appState.timeLeft / 60);
+                const seconds = appState.timeLeft % 60;
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (appState.timeLeft <= 0) {
+                    clearInterval(appState.timer);
+                    showToast('Time expired! Please select seats again.', 'error');
+                    appState.selectedSeats = [];
+                    updateBottomCart();
+                    showSeatSelection(); // Refresh seat selection
+                }
+            }, 1000);
+        }
+
+        // Show Cart & Payment
+        function showCart() {
+            const content = document.getElementById('cartContent');
+            const subtotal = appState.selectedSeats.length * appState.selectedShowtime.price;
+            const convenienceFee = Math.round(subtotal * 0.05); // 5% convenience fee
+            const taxes = Math.round(subtotal * 0.18); // 18% GST
+            const total = subtotal + convenienceFee + taxes;
+            
+            content.innerHTML = `
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <!-- Booking Summary -->
+                    <div class="lg:col-span-2">
+                        <h1 class="text-2xl font-bold text-gray-900 mb-6">Booking Summary</h1>
+                        
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                            <h3 class="font-semibold text-gray-900 mb-4">Movie Details</h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Movie:</span>
+                                    <span class="font-medium">${appState.selectedMovie.title}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Theater:</span>
+                                    <span class="font-medium">${appState.selectedTheater.name}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Date & Time:</span>
+                                    <span class="font-medium">Today, ${appState.selectedShowtime.time}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Seats:</span>
+                                    <span class="font-medium">${appState.selectedSeats.join(', ')}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Contact Information -->
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <h3 class="font-semibold text-gray-900 mb-4">Contact Information</h3>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <input type="email" placeholder="Email Address" 
+                                       class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                                <input type="tel" placeholder="Mobile Number" 
+                                       class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Summary -->
+                    <div>
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-24">
+                            <h3 class="font-semibold text-gray-900 mb-4">Payment Summary</h3>
+                            
+                            <div class="space-y-3 text-sm mb-4">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Tickets (${appState.selectedSeats.length}x)</span>
+                                    <span>${formatPrice(subtotal)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Convenience Fee</span>
+                                    <span>${formatPrice(convenienceFee)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Taxes & Fees</span>
+                                    <span>${formatPrice(taxes)}</span>
+                                </div>
+                                <hr class="my-3">
+                                <div class="flex justify-between font-semibold text-lg">
+                                    <span>Total Amount</span>
+                                    <span>${formatPrice(total)}</span>
+                                </div>
+                            </div>
+                            
+                            <button id="payNowBtn" class="w-full bg-pink-600 text-white py-3 rounded-lg font-medium hover:bg-pink-700 transition-colors">
+                                Pay ${formatPrice(total)}
+                            </button>
+                            
+                            <p class="text-xs text-gray-500 mt-3 text-center">
+                                By proceeding, you agree to our Terms & Conditions
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('payNowBtn').addEventListener('click', processPayment);
+            showPage('cart');
+        }
+
+        // Process Payment
+        function processPayment() {
+            // Simulate payment processing
+            showToast('Processing payment...', 'success');
+            
+            setTimeout(() => {
+                const booking = {
+                    id: Date.now(),
+                    movie: appState.selectedMovie,
+                    theater: appState.selectedTheater,
+                    showtime: appState.selectedShowtime,
+                    seats: [...appState.selectedSeats],
+                    bookingDate: new Date().toISOString(),
+                    status: 'confirmed'
+                };
+                
+                appState.bookings.push(booking);
+                localStorage.setItem('bookings', JSON.stringify(appState.bookings));
+                
+                clearInterval(appState.timer);
+                showBookingSuccess(booking);
+            }, 2000);
+        }
+
+        // Show Booking Success
+        function showBookingSuccess(booking) {
+            const content = document.getElementById('successContent');
+            
+            content.innerHTML = `
+                <div class="max-w-md mx-auto">
+                    <div class="text-6xl mb-6">🎉</div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-4">Booking Confirmed!</h1>
+                    <p class="text-gray-600 mb-8">Your tickets have been booked successfully</p>
+                    
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8 text-left">
+                        <h3 class="font-semibold text-gray-900 mb-4">Booking Details</h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Booking ID:</span>
+                                <span class="font-medium">#${booking.id}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Movie:</span>
+                                <span class="font-medium">${booking.movie.title}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Theater:</span>
+                                <span class="font-medium">${booking.theater.name}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Show Time:</span>
+                                <span class="font-medium">Today, ${booking.showtime.time}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Seats:</span>
+                                <span class="font-medium">${booking.seats.join(', ')}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <button id="downloadTicketBtn" class="w-full bg-pink-600 text-white py-3 rounded-lg font-medium hover:bg-pink-700">
+                            Download Ticket
+                        </button>
+                        <button id="backToHomeBtn" class="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50">
+                            Book More Tickets
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('downloadTicketBtn').addEventListener('click', () => {
+                showToast('Ticket downloaded successfully!', 'success');
+            });
+            
+            document.getElementById('backToHomeBtn').addEventListener('click', () => {
+                resetBookingState();
+                showPage('home');
+            });
+            
+            showPage('success');
+        }
+
+        // Show My Bookings
+        function showMyBookings() {
+            const content = document.getElementById('bookingsContent');
+            
+            if (appState.bookings.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">🎬</div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-2">No Bookings Yet</h2>
+                        <p class="text-gray-600 mb-6">Start by booking your first movie ticket!</p>
+                        <button id="browseMoviesBtn" class="bg-pink-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-pink-700">
+                            Browse Movies
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('browseMoviesBtn').addEventListener('click', () => {
+                    showPage('home');
+                });
+            } else {
+                content.innerHTML = `
+                    <div class="mb-6">
+                        <h1 class="text-2xl font-bold text-gray-900">My Bookings</h1>
+                        <p class="text-gray-600">Manage your movie tickets</p>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        ${appState.bookings.map(booking => `
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900 text-lg">${booking.movie.title}</h3>
+                                        <p class="text-gray-600">${booking.theater.name}</p>
+                                        <p class="text-sm text-gray-500">Booking ID: #${booking.id}</p>
+                                    </div>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                                        ${booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                    </span>
+                                </div>
+                                
+                                <div class="grid md:grid-cols-3 gap-4 mb-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Date & Time:</span>
+                                        <p class="font-medium">Today, ${booking.showtime.time}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Seats:</span>
+                                        <p class="font-medium">${booking.seats.join(', ')}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Total Amount:</span>
+                                        <p class="font-medium">${formatPrice(booking.seats.length * booking.showtime.price)}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-3">
+                                    <button class="edit-booking-btn bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700" 
+                                            data-booking-id="${booking.id}">
+                                        Edit Booking
+                                    </button>
+                                    <button class="repeat-booking-btn border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50" 
+                                            data-booking-id="${booking.id}">
+                                        Repeat Booking
+                                    </button>
+                                    <button class="download-ticket-btn border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+                                        Download Ticket
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                // Add event listeners
+                document.querySelectorAll('.edit-booking-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const bookingId = parseInt(e.target.dataset.bookingId);
+                        editBooking(bookingId);
+                    });
+                });
+                
+                document.querySelectorAll('.repeat-booking-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const bookingId = parseInt(e.target.dataset.bookingId);
+                        repeatBooking(bookingId);
+                    });
+                });
+                
+                document.querySelectorAll('.download-ticket-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        showToast('Ticket downloaded successfully!', 'success');
+                    });
+                });
+            }
+            
+            showPage('bookings');
+        }
+
+        // Edit Booking
+        function editBooking(bookingId) {
+            const booking = appState.bookings.find(b => b.id === bookingId);
+            appState.currentBooking = booking;
+            
+            const content = document.getElementById('editBookingContent');
+            
+            content.innerHTML = `
+                <div class="mb-6">
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Edit Booking</h1>
+                    <p class="text-gray-600">Modify your booking details</p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                    <h3 class="font-semibold text-gray-900 mb-4">Current Booking</h3>
+                    <div class="grid md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-600">Movie:</span>
+                            <p class="font-medium">${booking.movie.title}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Theater:</span>
+                            <p class="font-medium">${booking.theater.name}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Show Time:</span>
+                            <p class="font-medium">Today, ${booking.showtime.time}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Seats:</span>
+                            <p class="font-medium">${booking.seats.join(', ')}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <button id="changeSeatsBtn" class="bg-blue-600 text-white p-6 rounded-lg text-center hover:bg-blue-700 transition-colors">
+                        <div class="text-2xl mb-2">💺</div>
+                        <h3 class="font-semibold mb-2">Change Seats</h3>
+                        <p class="text-sm opacity-90">Select different seats for the same show</p>
+                    </button>
+                    
+                    <button id="changeShowtimeBtn" class="bg-green-600 text-white p-6 rounded-lg text-center hover:bg-green-700 transition-colors">
+                        <div class="text-2xl mb-2">🕐</div>
+                        <h3 class="font-semibold mb-2">Change Showtime</h3>
+                        <p class="text-sm opacity-90">Pick a different time or date</p>
+                    </button>
+                </div>
+                
+                <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p class="text-sm text-yellow-800">
+                        <strong>Note:</strong> Changes can be made up to 2 hours before the show time. 
+                        Additional charges may apply for upgrades.
+                    </p>
+                </div>
+            `;
+            
+            document.getElementById('changeSeatsBtn').addEventListener('click', () => {
+                // Set up state for editing
+                appState.selectedMovie = booking.movie;
+                appState.selectedTheater = booking.theater;
+                appState.selectedShowtime = booking.showtime;
+                appState.selectedSeats = [];
+                
+                showSeatSelection();
+                showToast('Select new seats for your booking', 'success');
+            });
+            
+            document.getElementById('changeShowtimeBtn').addEventListener('click', () => {
+                appState.selectedMovie = booking.movie;
+                showTheaters();
+                showToast('Select a new showtime', 'success');
+            });
+            
+            showPage('editBooking');
+        }
+
+        // Repeat Booking
+        function repeatBooking(bookingId) {
+            const booking = appState.bookings.find(b => b.id === bookingId);
+            
+            // Pre-fill booking details
+            appState.selectedMovie = booking.movie;
+            appState.selectedTheater = booking.theater;
+            appState.selectedShowtime = booking.showtime;
+            appState.selectedSeats = [];
+            
+            showSeatSelection();
+            showToast('Repeating your previous booking. Select seats to continue.', 'success');
+        }
+
+        // Reset Booking State
+        function resetBookingState() {
+            appState.selectedMovie = null;
+            appState.selectedTheater = null;
+            appState.selectedShowtime = null;
+            appState.selectedSeats = [];
+            appState.currentBooking = null;
+            
+            if (appState.timer) {
+                clearInterval(appState.timer);
+            }
+            
+            document.getElementById('bottomCart').classList.add('hidden');
+        }
+
+        // Event Listeners
+        document.getElementById('backToHome').addEventListener('click', () => showPage('home'));
+        document.getElementById('backToMovieDetails').addEventListener('click', () => showPage('movieDetails'));
+        document.getElementById('backToTheater').addEventListener('click', () => showPage('theater'));
+        document.getElementById('backToSeats').addEventListener('click', () => showPage('seat'));
+        document.getElementById('backToHomeFromBookings').addEventListener('click', () => showPage('home'));
+        document.getElementById('backToBookings').addEventListener('click', () => showPage('bookings'));
+        document.getElementById('myBookingsBtn').addEventListener('click', showMyBookings);
+        document.getElementById('proceedToPayment').addEventListener('click', showCart);
+
+        // Filter functionality
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('bg-pink-600', 'text-white'));
+                e.target.classList.add('bg-pink-600', 'text-white');
+                
+                const filter = e.target.dataset.filter;
+                filterMovies(filter);
+            });
+        });
+
+        function filterMovies(genre) {
+            const movieGrid = document.getElementById('movieGrid');
+            movieGrid.innerHTML = '';
+            
+            const filteredMovies = genre === 'all' ? movies : movies.filter(movie => movie.genre === genre);
+            
+            filteredMovies.forEach(movie => {
+                const movieCard = document.createElement('div');
+                movieCard.className = 'bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow';
+                movieCard.innerHTML = `
+                    <div class="aspect-[3/4] bg-gray-100 flex items-center justify-center text-6xl">
+                        ${movie.poster}
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-900 text-sm mb-1">${movie.title}</h3>
+                        <p class="text-xs text-gray-600 mb-2">${movie.genre.charAt(0).toUpperCase() + movie.genre.slice(1)} • ${movie.duration}</p>
+                        <div class="flex items-center">
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">⭐ ${movie.rating}</span>
+                        </div>
+                    </div>
+                `;
+                
+                movieCard.addEventListener('click', () => {
+                    appState.selectedMovie = movie;
+                    showMovieDetails();
+                });
+                
+                movieGrid.appendChild(movieCard);
+            });
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const movieGrid = document.getElementById('movieGrid');
+            movieGrid.innerHTML = '';
+            
+            const filteredMovies = movies.filter(movie => 
+                movie.title.toLowerCase().includes(searchTerm) ||
+                movie.genre.toLowerCase().includes(searchTerm)
+            );
+            
+            filteredMovies.forEach(movie => {
+                const movieCard = document.createElement('div');
+                movieCard.className = 'bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow';
+                movieCard.innerHTML = `
+                    <div class="aspect-[3/4] bg-gray-100 flex items-center justify-center text-6xl">
+                        ${movie.poster}
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-900 text-sm mb-1">${movie.title}</h3>
+                        <p class="text-xs text-gray-600 mb-2">${movie.genre.charAt(0).toUpperCase() + movie.genre.slice(1)} • ${movie.duration}</p>
+                        <div class="flex items-center">
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">⭐ ${movie.rating}</span>
+                        </div>
+                    </div>
+                `;
+                
+                movieCard.addEventListener('click', () => {
+                    appState.selectedMovie = movie;
+                    showMovieDetails();
+                });
+                
+                movieGrid.appendChild(movieCard);
+            });
+        });
+
+        // Initialize the application
+        initHomePage();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'979c1b4e65167ea4',t:'MTc1Njk3NDQzNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
